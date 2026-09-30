@@ -1,0 +1,564 @@
+<title>Minerva Agent Evals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Minerva's site language applied to an eval dashboard. Ivory ground, Garamond
+   for headlines and figures, small letterspaced sans labels, hairline rules, underlined
+   text links, and the engraved colonnade as the page's base. Single light look, as on their site. */
+:root{
+  --bg:#fdfaf2; --surface:#fffdf7; --surface-2:#f5f1e6; --border:#e7e1d3; --border-strong:#d3ccba;
+  --fg:#1d1b17; --fg-2:#6d695d; --fg-3:#9b9686;
+  --accent:#1d1b17; --accent-soft:#f1ecdf;
+  --good:#4d6a39; --bad:#a3412e; --warn:#9c7424;
+  --good-bg:#edf0e1; --bad-bg:#f7e7e1; --warn-bg:#f6eedb;
+  --base-series:#cdc6b3; --column:#b9b3a3;
+  --shadow:none;
+  --serif:"EB Garamond","Garamond","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --sans:"Instrument Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+button,select{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:12.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:4px}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(1.4) blur(8px);border-bottom:1px solid var(--border)}
+.top-in{max-width:1320px;margin:0 auto;padding:0 24px;height:52px;display:flex;align-items:center;gap:14px;min-width:0}
+.logo{display:flex;align-items:center;gap:8px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+.logo svg{display:block}
+.crumbs{display:flex;align-items:center;gap:6px;color:var(--fg-2);min-width:0;overflow:hidden;white-space:nowrap}
+.crumbs span{overflow:hidden;text-overflow:ellipsis}
+.crumbs .sep{color:var(--fg-3)}
+.crumbs b{color:var(--fg);font-weight:500}
+.spacer{flex:1}
+.badge{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;
+  border:1px solid var(--border);background:var(--surface-2);color:var(--fg-2);white-space:nowrap}
+.badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge.warn{background:var(--warn-bg);border-color:transparent;color:var(--warn)}
+.badge.good{background:var(--good-bg);border-color:transparent;color:var(--good)}
+.badge.bad{background:var(--bad-bg);border-color:transparent;color:var(--bad)}
+
+.page{max-width:1320px;margin:0 auto;padding:24px 24px 64px;display:grid;gap:16px}
+@media (max-width:640px){.page,.top-in{padding-left:16px;padding-right:16px}.crumbs{display:none}}
+
+/* header */
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;padding-bottom:4px}
+.head h1{margin:0;font-size:22px;font-weight:600;letter-spacing:-.02em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.head p{margin:4px 0 0;color:var(--fg-2);font-size:13px}
+.pickers{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.picker{display:flex;align-items:center;gap:6px;height:32px;padding:0 4px 0 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);box-shadow:var(--shadow)}
+.picker label{font-size:12px;color:var(--fg-3)}
+.picker select{border:0;background:transparent;height:30px;font-weight:500;padding-right:4px;cursor:pointer;max-width:180px}
+.picker .sw{width:8px;height:8px;border-radius:2px}
+
+/* cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);min-width:0}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px 0;flex-wrap:wrap}
+.card-h h2{margin:0;font-size:14px;font-weight:600;letter-spacing:-.005em}
+.card-h .sub{color:var(--fg-3);font-size:12.5px}
+.card-b{padding:14px 16px 16px}
+
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+@media (max-width:980px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{padding:14px 16px;display:grid;gap:6px}
+.kpi .l{color:var(--fg-2);font-size:12.5px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.kpi .v{font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
+.kpi .v small{font-size:13px;color:var(--fg-3);font-weight:400;margin-left:4px}
+.kpi .f{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--fg-3)}
+.delta{font-weight:500;font-size:12px;padding:1px 6px;border-radius:5px}
+.delta.up{color:var(--good);background:var(--good-bg)}
+.delta.dn{color:var(--bad);background:var(--bad-bg)}
+.delta.flat{color:var(--fg-2);background:var(--surface-2)}
+.bar2{height:4px;border-radius:2px;background:var(--surface-2);overflow:hidden}
+.bar2 i{display:block;height:100%;border-radius:2px;background:var(--accent)}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:16px}
+@media (max-width:980px){.grid2{grid-template-columns:1fr}}
+
+/* segmented */
+.seg{display:inline-flex;padding:2px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border)}
+.seg button{border:0;background:transparent;height:26px;padding:0 10px;border-radius:6px;font-size:12.5px;color:var(--fg-2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.08);font-weight:500}
+
+/* heatmap */
+.scroll{overflow-x:auto}
+table.hm{width:100%;border-collapse:separate;border-spacing:4px;min-width:560px;margin:-4px}
+.hm th{font-size:11.5px;font-weight:500;color:var(--fg-3);text-align:center;padding:0 0 2px;letter-spacing:.02em}
+.hm th.rl{text-align:left;font-size:13px;color:var(--fg);font-weight:400;padding:0 10px 0 0;white-space:nowrap}
+.hm th.rl .id{font-family:var(--mono);font-size:11.5px;color:var(--fg-3);margin-right:8px}
+.hm td{padding:0}
+.cell{width:100%;height:32px;border:0;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:4px;
+  font:500 12.5px/1 var(--sans);font-variant-numeric:tabular-nums;color:var(--fg);cursor:pointer;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--fg) 5%,transparent)}
+.cell:hover{box-shadow:inset 0 0 0 1.5px var(--fg-2)}
+.cell.na{background:transparent;color:var(--fg-3);cursor:default;box-shadow:inset 0 0 0 1px var(--border);
+  background-image:repeating-linear-gradient(135deg,transparent 0 5px,var(--surface-2) 5px 6px)}
+.cell.na:hover{box-shadow:inset 0 0 0 1px var(--border)}
+.cell svg{flex:none}
+.hm td.pr{font-size:12.5px;text-align:right;color:var(--fg-2);padding-left:8px;white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin-top:14px;font-size:12px;color:var(--fg-2)}
+.legend .scale{display:flex;align-items:center;gap:6px}
+.legend .scale i{width:18px;height:10px;border-radius:3px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--fg) 6%,transparent)}
+
+/* failure chart */
+.fm{display:grid;gap:12px}
+.fm-row{display:grid;gap:5px;cursor:default}
+.fm-top{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.fm-top .n{color:var(--fg-2)}
+.fm-top .crit{color:var(--bad);font-weight:500}
+.fm-bars{display:grid;gap:3px}
+.fm-bars i{display:block;height:6px;border-radius:0 3px 3px 0;min-width:2px}
+.fm-legend{display:flex;gap:14px;font-size:12px;color:var(--fg-2);margin-top:14px;flex-wrap:wrap}
+.fm-legend span{display:inline-flex;align-items:center;gap:6px}
+.fm-legend i{width:10px;height:10px;border-radius:2px}
+.empty{color:var(--fg-3);font-size:13px;padding:8px 0}
+
+/* table */
+table.tt{width:100%;border-collapse:collapse;min-width:760px}
+.tt th{font-size:12px;font-weight:500;color:var(--fg-3);text-align:left;padding:10px 16px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface-2)}
+.tt th.r,.tt td.r{text-align:right}
+.tt td{padding:11px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tt tbody tr{cursor:pointer}
+.tt tbody tr:hover td{background:var(--surface-2)}
+.tt tbody tr:last-child td{border-bottom:0}
+.tt .t1{font-weight:500}
+.tt .t2{color:var(--fg-3);font-size:12.5px;max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cat{font-size:12px;color:var(--fg-2);background:var(--surface-2);border:1px solid var(--border);padding:1px 7px;border-radius:5px;white-space:nowrap}
+.pbar{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.pbar .track{width:56px;height:4px;border-radius:2px;background:var(--surface-2);overflow:hidden}
+.pbar .track i{display:block;height:100%}
+.chev{color:var(--fg-3)}
+.tt-wrap{overflow-x:auto;border-top:1px solid var(--border);margin-top:14px}
+
+/* tooltip */
+.tip{position:fixed;z-index:50;pointer-events:none;background:var(--fg);color:var(--bg);font-size:12px;line-height:1.4;padding:7px 9px;border-radius:6px;
+  max-width:260px;box-shadow:0 6px 20px rgba(0,0,0,.18);opacity:0;transition:opacity .08s}
+.tip b{font-weight:600}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(10,11,14,.36);z-index:30}
+.sheet{position:fixed;top:0;right:0;bottom:0;width:min(640px,100vw);z-index:31;background:var(--surface);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;box-shadow:-12px 0 32px rgba(0,0,0,.12);animation:slide .18s ease-out}
+@keyframes slide{from{transform:translateX(24px);opacity:.6}to{transform:none;opacity:1}}
+.sh-h{padding:calc(14px + env(safe-area-inset-top,0px)) 20px 14px;border-bottom:1px solid var(--border);display:grid;gap:10px}
+.sh-row{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.sh-h h3{margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.sh-meta{color:var(--fg-3);font-size:12.5px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.x{border:1px solid var(--border);background:var(--surface);width:30px;height:30px;border-radius:7px;cursor:pointer;display:grid;place-items:center;color:var(--fg-2)}
+.x:hover{background:var(--surface-2)}
+.sh-b{overflow:auto;padding:16px 20px calc(24px + env(safe-area-inset-bottom,0px));display:grid;gap:18px;align-content:start}
+.lbl{font-size:12px;font-weight:500;color:var(--fg-3);margin-bottom:8px}
+.msg{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13.5px}
+.msg.user{background:var(--accent-soft);border-color:transparent}
+.hint{font-size:12.5px;color:var(--fg-2);margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 8px;border-radius:6px;border:1px solid var(--border);font-size:12px;color:var(--fg-2)}
+.chip b{color:var(--fg);font-weight:500}
+.chip.bad{border-color:transparent;background:var(--bad-bg);color:var(--bad)}
+.chip.bad b{color:var(--bad)}
+.trials .seg button{font-variant-numeric:tabular-nums}
+.spans{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.span{border-bottom:1px solid var(--border)}
+.span:last-child{border-bottom:0}
+.span summary{list-style:none;display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:center;padding:9px 12px;cursor:pointer}
+.span summary::-webkit-details-marker{display:none}
+.span summary:hover{background:var(--surface-2)}
+.span .i{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font:500 11px var(--mono);background:var(--surface-2);color:var(--fg-2)}
+.span .nm{font-family:var(--mono);font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.span .nm em{font-style:normal;color:var(--fg-3)}
+.st{font-size:11.5px;font-weight:500;padding:1px 7px;border-radius:5px}
+.st.ok{color:var(--good);background:var(--good-bg)}
+.st.err{color:var(--bad);background:var(--bad-bg)}
+.span .body{padding:0 12px 12px 44px;display:grid;gap:8px}
+.span pre{margin:0;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font:12px/1.5 var(--mono);
+  white-space:pre-wrap;word-break:break-word;max-height:220px;overflow:auto}
+.span .errtxt{color:var(--bad);font-size:12.5px}
+.issues{margin:0;padding:0;list-style:none;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.issues li{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;align-items:start}
+.issues li:last-child{border-bottom:0}
+.issues .k{font-size:11.5px;font-weight:500;padding:1px 7px;border-radius:5px;white-space:nowrap;background:var(--surface-2);color:var(--fg-2)}
+.issues .k.crit{background:var(--bad-bg);color:var(--bad)}
+.issues .d{overflow-wrap:anywhere}
+.clean{display:flex;align-items:center;gap:8px;color:var(--good);font-size:13px;font-weight:500}
+.foot{color:var(--fg-3);font-size:12.5px;display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:space-between;padding-top:4px}
+.foot code{font-family:var(--mono);font-size:12px;color:var(--fg-2);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:2px 6px;overflow-wrap:anywhere}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}.tip{transition:none}}
+/* ---- Minerva treatment ---- */
+body{font-family:var(--sans)}
+.top{background:color-mix(in srgb,var(--bg) 92%,transparent);border-bottom:1px solid var(--border)}
+.top-in,.page{max-width:1240px}
+.top-in{height:64px}
+.wordmark{font:400 27px/1 var(--serif);letter-spacing:-.01em;color:var(--fg)}
+.divider{width:1px;height:22px;background:var(--border-strong)}
+.eyebrow{font:500 11px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--fg-3)}
+.crumbs{font-size:13px}
+.hero{padding:28px 0 8px;display:grid;gap:10px}
+.hero h1{margin:0;font:400 clamp(30px,4.4vw,46px)/1.08 var(--serif);letter-spacing:-.01em;text-wrap:balance}
+.hero .lede{margin:0;font:400 clamp(20px,2.6vw,28px)/1.25 var(--serif);color:var(--fg-3);text-wrap:balance}
+.hero-meta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px 24px;padding-top:18px;margin-top:10px;border-top:1px solid var(--border)}
+.head{display:none}
+.card{border-radius:3px;background:var(--surface)}
+.card-h h2{font:500 21px/1.2 var(--serif);letter-spacing:-.005em}
+.card-h .sub{font-size:12.5px}
+.kpi .l{font:500 11px/1.3 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--fg-3)}
+.kpi .v{font:400 44px/1 var(--serif);letter-spacing:-.01em;font-variant-numeric:lining-nums tabular-nums}
+.kpi .v small{font:400 16px var(--serif);color:var(--fg-3)}
+.badge{border-radius:3px;height:22px;font:500 10.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase}
+.delta{border-radius:3px}
+.picker{border-radius:3px;height:34px}
+.picker label{font:500 10.5px var(--sans);letter-spacing:.12em;text-transform:uppercase}
+.picker select{font-family:var(--serif);font-size:16px}
+.seg{background:transparent;border:0;padding:0;gap:18px}
+.seg button{padding:0;height:28px;border-radius:0;font-size:13px;color:var(--fg-3);border-bottom:1px solid transparent}
+.seg button[aria-pressed="true"]{background:transparent;box-shadow:none;color:var(--fg);border-bottom-color:var(--fg);font-weight:500}
+.cell{border-radius:2px;font-family:var(--sans);box-shadow:none}
+.cell:hover{box-shadow:inset 0 0 0 1px var(--fg)}
+.hm th{font:500 10.5px var(--sans);letter-spacing:.1em;text-transform:uppercase}
+.hm th.rl{font:400 16px var(--serif);text-transform:none;letter-spacing:0}
+.hm th.rl .id,.tt .mono{font-family:var(--sans);font-size:11px;letter-spacing:.06em}
+.fm-top{font-family:var(--serif);font-size:16px}
+.fm-bars i{border-radius:0 2px 2px 0;height:5px}
+.tt th{background:transparent;font:500 10.5px var(--sans);letter-spacing:.12em;text-transform:uppercase}
+.tt .t1{font:400 17px/1.3 var(--serif)}
+.tt .t2{font-family:var(--serif);font-style:italic;font-size:14px}
+.cat{border-radius:3px;background:transparent;font-size:11.5px}
+.tip{background:var(--fg);color:var(--bg);border-radius:3px}
+.sheet{background:var(--bg);box-shadow:-18px 0 40px rgba(40,34,20,.12)}
+.sheet h3{font:400 26px/1.15 var(--serif)}
+.lbl{font:500 10.5px var(--sans);letter-spacing:.12em;text-transform:uppercase}
+.msg{border-radius:3px;font-family:var(--serif);font-size:16.5px;line-height:1.4}
+.msg.user{background:var(--accent-soft);font-style:italic}
+.hint{font-family:var(--serif);font-size:15px;color:var(--fg-2)}
+.chip,.st,.issues .k{border-radius:3px}
+.spans,.issues,.span pre{border-radius:3px}
+.x{border-radius:3px}
+.foot{font-size:12.5px}
+.foot a,.link{color:var(--fg);text-decoration:none;border-bottom:1px solid var(--border-strong);font-family:var(--serif);font-size:15px}
+.colonnade{height:120px;margin-top:8px;background-repeat:repeat-x;background-position:bottom;opacity:.9}
+@media (max-width:640px){.kpi .v{font-size:36px}.colonnade{height:90px}}
+</style>
+
+<header class="top">
+  <div class="top-in">
+    <span class="wordmark">Minerva</span>
+    <span class="divider" aria-hidden="true"></span>
+    <span class="eyebrow">Agent evals</span>
+    <nav class="crumbs" aria-label="Breadcrumb"><span class="sep">/</span><span>bookkeeping-agent</span><span class="sep">/</span><b id="crumb-exp"></b></nav>
+    <div class="spacer"></div>
+    <span class="badge warn" id="demo-badge" hidden><span class="dot"></span>Demo data</span>
+  </div>
+</header>
+
+<main class="page">
+  <section class="hero">
+    <span class="eyebrow">Preflight · pre-ship check</span>
+    <h1 id="hero-q"></h1>
+    <p class="lede" id="hero-lede"></p>
+    <div class="hero-meta"><div id="verdict"></div><div class="pickers" id="pickers"></div></div>
+  </section>
+
+  <section class="kpis" id="kpis" aria-label="Summary"></section>
+
+  <section class="grid2">
+    <div class="card">
+      <div class="card-h">
+        <div><h2>Score by task and check</h2><div class="sub">Mean over trials. Click a cell to open the trace.</div></div>
+        <div class="seg" id="hm-mode" role="group" aria-label="Heatmap view"></div>
+      </div>
+      <div class="card-b">
+        <div class="scroll"><table class="hm" id="hm"></table></div>
+        <div class="legend" id="hm-legend"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><div><h2>Failure modes</h2><div class="sub">Runs affected, candidate vs baseline</div></div></div>
+      <div class="card-b"><div class="fm" id="fm"></div><div class="fm-legend" id="fm-legend"></div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><div><h2>Tasks</h2><div class="sub" id="tasks-sub"></div></div></div>
+    <div class="tt-wrap"><table class="tt" id="tt"></table></div>
+  </section>
+
+  <footer class="foot">
+    <span id="foot-meta"></span>
+    <span>Run on your prompt: <code>python -m preflight run --prompt agent.md --trials 3</code></span>
+  </footer>
+</main>
+<div class="colonnade" id="colonnade" aria-hidden="true"></div>
+
+<div class="tip" id="tip" role="tooltip"></div>
+<div id="sheet-root"></div>
+
+<script>
+const D = __DATA__;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pct = v => v == null ? "–" : Math.round(v * 100) + "%";
+const TASK = Object.fromEntries(D.tasks.map(t => [t.id, t]));
+const DIM_NAME = {SELECT:"Tool choice", ARGS:"Arguments", ORDER:"Ordering", GUARD:"Safety", EFFIC:"Efficiency", REPLY:"Reply"};
+const KIND = {
+  unapproved_action:["Unapproved payment or bank change",1], forbidden:["Forbidden action",1], agent_crash:["Agent error",1],
+  missing_call:["Missing tool call",0], wrong_arg:["Wrong argument",0], out_of_order:["Out of order",0],
+  over_budget:["Over call budget",0], duplicate_call:["Duplicate call",0], reply:["Reply content",0], tool_error:["Tool error",0]
+};
+const ICON_WARN = '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 6v3.6M8 11.6v.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+const ICON_OK = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m5 8.2 2 2 4-4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+let baseI = 0, candI = D.runs.length - 1, mode = "cand";
+const multi = () => D.runs.length > 1 && baseI !== candI;
+
+/* ---------- derived stats ---------- */
+function stats(r){
+  const n = r.runs.length;
+  const calls = r.runs.reduce((a, x) => a + x.trace.length, 0) / n;
+  const kinds = {};
+  for (const x of r.runs){
+    const seen = new Set(x.score.issues.map(i => i.kind));
+    seen.forEach(k => kinds[k] = (kinds[k] || 0) + 1);
+  }
+  return {pass: r.summary.pass_rate, score: r.summary.score, guard: r.summary.guard_breaches, calls, kinds, n};
+}
+function ready(s){ return s.guard === 0 && s.pass >= .9; }
+
+/* ---------- header ---------- */
+function header(){
+  const C = D.runs[candI], B = D.runs[baseI];
+  $("#crumb-exp").textContent = C.meta.label;
+  const s = stats(C), ok = ready(s);
+  $("#verdict").innerHTML = `<span class="badge ${ok ? "good" : "bad"}"><span class="dot"></span>${ok ? "Ready to ship" : s.guard ? `Blocked · ${s.guard} safety failure${s.guard>1?"s":""}` : "Below pass bar"}</span>`;
+  const agent = String(C.meta.agent), bs = stats(B);
+  $("#hero-q").textContent = ok ? `${C.meta.label} is ready to ship.` : `${C.meta.label} isn't ready to ship yet.`;
+  const up = multi() ? `, ${s.pass >= bs.pass ? "up" : "down"} from ${pct(bs.pass)} on ${B.meta.label}` : "";
+  $("#hero-lede").textContent = `It passed ${pct(s.pass)} of ${s.n} runs${up}. ` +
+    (s.guard ? `${s.guard === 1 ? "One run" : s.guard + " runs"} broke a safety rule, and that alone blocks a release.` : "No run broke a safety rule.");
+  document.title = "Minerva Agent Evals";
+  $("#foot-meta").dataset.sub = `${D.tasks.length} tasks × ${C.meta.trials} trials · ${agent.startsWith("scripted") ? "scripted agent" : agent}${C.meta.prompt_sha ? " · prompt " + C.meta.prompt_sha : ""}`;
+  $("#demo-badge").hidden = !D.runs.some(r => String(r.meta.agent).startsWith("scripted"));
+  if (D.runs.length > 1){
+    const opts = sel => D.runs.map((r, i) => `<option value="${i}" ${i===sel?"selected":""}>${esc(r.meta.label)}</option>`).join("");
+    $("#pickers").innerHTML = `
+      <div class="picker"><span class="sw" style="background:var(--base-series)"></span><label for="pick-base">Baseline</label><select id="pick-base">${opts(baseI)}</select></div>
+      <div class="picker"><span class="sw" style="background:var(--accent)"></span><label for="pick-cand">Candidate</label><select id="pick-cand">${opts(candI)}</select></div>`;
+    $("#pick-base").onchange = e => { baseI = +e.target.value; renderAll(); };
+    $("#pick-cand").onchange = e => { candI = +e.target.value; renderAll(); };
+  }
+  const m = C.meta;
+  $("#foot-meta").textContent = `${$("#foot-meta").dataset.sub} · run ${m.started} · pass bar ${Math.round(D.passBar*100)}% per run with zero safety failures`;
+}
+
+/* ---------- KPIs ---------- */
+function delta(v, fmt, goodUp = true){
+  if (!multi()) return "";
+  if (Math.abs(v) < 1e-9) return `<span class="delta flat">no change</span>`;
+  const good = goodUp ? v > 0 : v < 0;
+  return `<span class="delta ${good ? "up" : "dn"}">${v > 0 ? "+" : "−"}${fmt(Math.abs(v))}</span>`;
+}
+function kpis(){
+  const c = stats(D.runs[candI]), b = stats(D.runs[baseI]);
+  const vs = multi() ? `vs ${esc(D.runs[baseI].meta.label)}` : "";
+  const card = (l, v, extra, foot) => `<div class="card kpi"><div class="l">${l}${extra||""}</div><div class="v num">${v}</div><div class="f">${foot}</div></div>`;
+  $("#kpis").innerHTML =
+    card("Pass rate", pct(c.pass), "", `${delta(c.pass - b.pass, x => Math.round(x*100) + " pts")} ${vs}`) +
+    card("Mean score", c.score.toFixed(2), "", `${delta(c.score - b.score, x => x.toFixed(2))} ${vs}`) +
+    card("Safety failures", `${c.guard}<small>/ ${c.n} runs</small>`, c.guard ? `<span class="badge bad">${ICON_WARN} blocking</span>` : `<span class="badge good">none</span>`,
+         `${delta(c.guard - b.guard, x => String(x), false)} ${vs}`) +
+    card("Tool calls per run", c.calls.toFixed(1), "", `${delta(c.calls - b.calls, x => x.toFixed(1), false)} ${vs}`);
+}
+
+/* ---------- heatmap ---------- */
+function tint(v){ // score -> background
+  if (v >= .999) return "color-mix(in oklab, var(--good) 10%, var(--surface))";
+  if (v >= .8)  return `color-mix(in oklab, var(--good) ${Math.round(6 + (v-.8)*40)}%, var(--surface))`;
+  if (v >= .5)  return `color-mix(in oklab, var(--warn) ${Math.round(14 + (.8-v)*50)}%, var(--surface))`;
+  return `color-mix(in oklab, var(--bad) ${Math.round(22 + (.5-v)*60)}%, var(--surface))`;
+}
+function dtint(d){
+  if (Math.abs(d) < .005) return "var(--surface-2)";
+  const k = Math.round(10 + Math.min(1, Math.abs(d)) * 40);
+  return `color-mix(in oklab, var(${d > 0 ? "--good" : "--bad"}) ${k}%, var(--surface))`;
+}
+function heatmap(){
+  const modes = multi() ? [["cand","Candidate"],["base","Baseline"],["diff","Diff"]] : [["cand","Scores"]];
+  if (!multi() && mode !== "cand") mode = "cand";
+  $("#hm-mode").innerHTML = modes.map(([k,l]) => `<button aria-pressed="${mode===k}" data-m="${k}">${l}</button>`).join("");
+  $("#hm-mode").querySelectorAll("button").forEach(b => b.onclick = () => { mode = b.dataset.m; heatmap(); });
+  const C = D.runs[candI].summary, B = D.runs[baseI].summary;
+  const S = mode === "base" ? B : C;
+  const head = `<thead><tr><th></th>${D.dims.map(d => `<th scope="col" data-tip="<b>${DIM_NAME[d]}</b><br>${esc(D.dimHelp[d])}">${DIM_NAME[d]}</th>`).join("")}<th style="text-align:right">Pass</th></tr></thead>`;
+  const rows = D.tasks.filter(t => S.grid[t.id]).map(t => {
+    const cells = D.dims.map(d => {
+      const v = S.grid[t.id][d];
+      if (mode === "diff"){
+        const a = C.grid[t.id]?.[d], b = B.grid[t.id]?.[d];
+        if (a == null || b == null) return `<td><span class="cell na" aria-label="not applicable"></span></td>`;
+        const x = a - b;
+        return `<td><button class="cell" style="background:${dtint(x)}" data-t="${t.id}" data-d="${d}"
+          data-tip="<b>${t.id} · ${DIM_NAME[d]}</b><br>${pct(b)} → ${pct(a)}">${Math.abs(x) < .005 ? "0" : (x > 0 ? "+" : "−") + Math.round(Math.abs(x)*100)}</button></td>`;
+      }
+      if (v == null) return `<td><span class="cell na" aria-label="not applicable"></span></td>`;
+      const unsafe = d === "GUARD" && v < 1;
+      return `<td><button class="cell" style="background:${tint(v)}${unsafe ? ";color:var(--bad)" : ""}" data-t="${t.id}" data-d="${d}"
+        data-tip="<b>${t.id} · ${DIM_NAME[d]}</b><br>${pct(v)} mean${unsafe ? "<br>At least one unsafe run" : ""}">${unsafe ? ICON_WARN : ""}${Math.round(v*100)}</button></td>`;
+    }).join("");
+    const pr = (mode === "base" ? B : C).tasks[t.id].pass_rate;
+    return `<tr><th class="rl" scope="row"><span class="id">${t.id}</span>${esc(t.title)}</th>${cells}<td class="pr num">${pct(pr)}</td></tr>`;
+  }).join("");
+  $("#hm").innerHTML = head + "<tbody>" + rows + "</tbody>";
+  $("#hm").querySelectorAll("button.cell").forEach(b => b.onclick = () =>
+    openSheet(b.dataset.t, b.dataset.d, mode === "base" ? baseI : candI));
+  $("#hm-legend").innerHTML = mode === "diff"
+    ? `<span class="scale"><i style="background:${dtint(-.6)}"></i>worse</span><span class="scale"><i style="background:${dtint(0)}"></i>no change</span><span class="scale"><i style="background:${dtint(.6)}"></i>better</span><span>Points change, candidate minus baseline</span>`
+    : `<span class="scale">0 ${[.2,.45,.65,.85,1].map(v => `<i style="background:${tint(v)}"></i>`).join("")} 100</span>
+       <span style="display:inline-flex;align-items:center;gap:5px;color:var(--bad)">${ICON_WARN}<span style="color:var(--fg-2)">unsafe run in this cell</span></span>
+       <span class="scale"><i class="na" style="background-image:repeating-linear-gradient(135deg,transparent 0 3px,var(--border) 3px 4px)"></i>not applicable</span>`;
+}
+
+/* ---------- failure modes ---------- */
+function failures(){
+  const c = stats(D.runs[candI]), b = stats(D.runs[baseI]);
+  const keys = Object.keys(KIND).filter(k => k !== "tool_error" && (c.kinds[k] || (multi() && b.kinds[k])));
+  keys.sort((x, y) => (KIND[y][1] - KIND[x][1]) || ((c.kinds[y]||0) - (c.kinds[x]||0)) || ((b.kinds[y]||0) - (b.kinds[x]||0)));
+  const max = Math.max(1, ...keys.map(k => Math.max(c.kinds[k]||0, multi() ? b.kinds[k]||0 : 0)));
+  $("#fm").innerHTML = keys.length ? keys.map(k => {
+    const cv = c.kinds[k] || 0, bv = b.kinds[k] || 0;
+    return `<div class="fm-row" data-tip="<b>${KIND[k][0]}</b><br>Candidate: ${cv} of ${c.n} runs${multi() ? `<br>Baseline: ${bv} of ${b.n} runs` : ""}">
+      <div class="fm-top"><span class="${KIND[k][1] ? "crit" : ""}">${KIND[k][0]}</span><span class="n num">${cv}${multi() ? ` <span style="color:var(--fg-3)">/ ${bv}</span>` : ""}</span></div>
+      <div class="fm-bars"><i style="width:${cv/max*100}%;background:var(--accent)"></i>${multi() ? `<i style="width:${bv/max*100}%;background:var(--base-series)"></i>` : ""}</div></div>`;
+  }).join("") : `<div class="empty">No failures in either run.</div>`;
+  $("#fm-legend").innerHTML = `<span><i style="background:var(--accent)"></i>${esc(D.runs[candI].meta.label)}</span>` +
+    (multi() ? `<span><i style="background:var(--base-series)"></i>${esc(D.runs[baseI].meta.label)}</span>` : "") +
+    `<span style="color:var(--bad)">Red label = blocks shipping</span>`;
+}
+
+/* ---------- task table ---------- */
+function tasks(){
+  const C = D.runs[candI], B = D.runs[baseI];
+  const callsFor = (r, id) => { const xs = r.runs.filter(x => x.task_id === id); return xs.reduce((a,x) => a + x.trace.length, 0) / xs.length; };
+  const pb = (v, col) => `<div class="pbar num">${pct(v)}<span class="track"><i style="width:${v*100}%;background:${col}"></i></span></div>`;
+  let improved = 0, regressed = 0;
+  const rows = D.tasks.filter(t => C.summary.tasks[t.id]).map(t => {
+    const c = C.summary.tasks[t.id], b = B.summary.tasks[t.id];
+    const unsafe = C.summary.grid[t.id].GUARD < 1;
+    const d = multi() && b ? c.pass_rate - b.pass_rate : 0;
+    if (d > .001) improved++; if (d < -.001) regressed++;
+    const status = unsafe ? `<span class="badge bad">${ICON_WARN} Unsafe</span>`
+      : c.pass_rate >= 1 ? `<span class="badge good"><span class="dot"></span>Passing</span>`
+      : `<span class="badge warn"><span class="dot"></span>Flaky</span>`;
+    const dl = multi() && b ? (Math.abs(d) < .001 ? `<span class="delta flat">0</span>` : `<span class="delta ${d>0?"up":"dn"}">${d>0?"+":"−"}${Math.round(Math.abs(d)*100)}</span>`) : "";
+    return `<tr data-t="${t.id}" tabindex="0">
+      <td><div class="t1"><span class="mono" style="color:var(--fg-3);margin-right:8px">${t.id}</span>${esc(t.title)}</div><div class="t2">“${esc(t.prompt)}”</div></td>
+      <td><span class="cat">${esc(t.category)}</span></td>
+      ${multi() ? `<td class="r">${b ? pb(b.pass_rate, "var(--base-series)") : "–"}</td>` : ""}
+      <td class="r">${pb(c.pass_rate, "var(--accent)")}</td>
+      ${multi() ? `<td class="r">${dl}</td>` : ""}
+      <td class="r num">${callsFor(C, t.id).toFixed(1)} <span style="color:var(--fg-3)">/ ${t.budget}</span></td>
+      <td>${status}</td>
+      <td class="chev">›</td></tr>`;
+  }).join("");
+  $("#tt").innerHTML = `<thead><tr><th>Task</th><th>Category</th>${multi() ? `<th class="r">${esc(B.meta.label)}</th>` : ""}<th class="r">${esc(C.meta.label)}</th>${multi() ? `<th class="r">Δ pts</th>` : ""}<th class="r">Calls / budget</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody>`;
+  $("#tt").querySelectorAll("tbody tr").forEach(tr => {
+    const go = () => openSheet(tr.dataset.t, null, candI);
+    tr.onclick = go; tr.onkeydown = e => { if (e.key === "Enter") go(); };
+  });
+  $("#tasks-sub").textContent = multi() ? `${improved} improved · ${regressed} regressed · click a row for traces` : "Click a row for traces";
+}
+
+/* ---------- trace sheet ---------- */
+let sheet = null;
+function openSheet(tid, dim, ri){
+  const runs = D.runs[ri].runs.filter(x => x.task_id === tid).sort((a,b) => a.trial - b.trial);
+  const key = x => (dim ? (x.score.dims[dim] ?? 1) : 0) + x.score.total;
+  const trial = runs.slice().sort((a,b) => key(a) - key(b))[0].trial; // worst first
+  sheet = {tid, dim, ri, trial};
+  drawSheet();
+}
+function drawSheet(){
+  const root = $("#sheet-root");
+  if (!sheet){ root.innerHTML = ""; return; }
+  const {tid, ri, dim} = sheet, t = TASK[tid], R = D.runs[ri];
+  const runs = R.runs.filter(x => x.task_id === tid).sort((a,b) => a.trial - b.trial);
+  const run = runs.find(x => x.trial === sheet.trial);
+  const j = v => esc(JSON.stringify(v, null, 2));
+  const spans = run.trace.map((c, i) => {
+    const args = Object.entries(c.input).map(([k,v]) => `${k}=${JSON.stringify(v)}`).join(", ");
+    return `<details class="span" ${c.error ? "open" : ""}><summary>
+      <span class="i">${i+1}</span><span class="nm">${esc(c.name)}<em>(${esc(args)})</em></span>
+      <span class="st ${c.error ? "err" : "ok"}">${c.error ? "Rejected" : "200"}</span></summary>
+      <div class="body">${c.error ? `<div class="errtxt">${esc(c.error)}</div>` : ""}
+        <div><div class="lbl">Input</div><pre>${j(c.input)}</pre></div>
+        ${c.error ? "" : `<div><div class="lbl">Output</div><pre>${j(c.output)}</pre></div>`}</div></details>`;
+  }).join("") || `<div class="empty" style="padding:12px">No tool calls.</div>`;
+  const iss = run.score.issues.filter(i => i.kind !== "tool_error");
+  root.innerHTML = `<div class="scrim" id="scrim"></div>
+  <aside class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-title">
+    <div class="sh-h">
+      <div class="sh-row"><div class="sh-meta"><span class="mono">${t.id}</span><span class="cat">${esc(t.category)}</span><span>${esc(R.meta.label)}</span></div>
+        <button class="x" id="close" aria-label="Close">✕</button></div>
+      <h3 id="sh-title">${esc(t.title)}</h3>
+      <div class="sh-row" style="justify-content:flex-start;flex-wrap:wrap">
+        <div class="seg trials" role="group" aria-label="Trial">${runs.map(x =>
+          `<button aria-pressed="${x.trial===sheet.trial}" data-trial="${x.trial}">Trial ${x.trial+1} · ${x.score.passed ? "pass" : "fail"}</button>`).join("")}</div>
+        <span class="badge ${run.score.passed ? "good" : "bad"}"><span class="dot"></span>Score ${run.score.total.toFixed(2)}</span>
+      </div>
+    </div>
+    <div class="sh-b">
+      <div><div class="lbl">Customer</div><div class="msg user">${esc(t.prompt)}</div>${t.note ? `<div class="hint">${esc(t.note)}</div>` : ""}</div>
+      <div><div class="lbl">Checks</div><div class="chips">${D.dims.map(d => {
+        const v = run.score.dims[d]; const bad = v != null && v < 1;
+        return `<span class="chip ${bad ? "bad" : ""}" ${d===dim ? 'style="box-shadow:0 0 0 1.5px var(--fg-2)"' : ""}>${DIM_NAME[d]} <b class="num">${pct(v)}</b></span>`;
+      }).join("")}</div></div>
+      <div><div class="lbl">Tool calls · expected ${esc(t.expect.join(" → "))} · budget ${t.budget}</div><div class="spans">${spans}</div></div>
+      <div><div class="lbl">Findings</div>${iss.length ? `<ul class="issues">${iss.map(i =>
+        `<li><span class="k ${KIND[i.kind]?.[1] ? "crit" : ""}">${esc(KIND[i.kind]?.[0] || i.kind)}</span><span class="d">${esc(i.detail)}</span></li>`).join("")}</ul>`
+        : `<div class="clean">${ICON_OK} All checks passed on this trial</div>`}</div>
+      <div><div class="lbl">Agent reply</div><div class="msg">${esc(run.reply || "(no reply)")}</div></div>
+    </div>
+  </aside>`;
+  $("#scrim").onclick = closeSheet; $("#close").onclick = closeSheet; $("#close").focus();
+  root.querySelectorAll("[data-trial]").forEach(b => b.onclick = () => { sheet.trial = +b.dataset.trial; drawSheet(); });
+}
+function closeSheet(){ sheet = null; drawSheet(); }
+document.addEventListener("keydown", e => { if (e.key === "Escape" && sheet) closeSheet(); });
+
+/* ---------- tooltip ---------- */
+const tip = $("#tip");
+document.addEventListener("mouseover", e => {
+  const el = e.target.closest("[data-tip]");
+  if (!el){ tip.style.opacity = 0; return; }
+  tip.innerHTML = el.dataset.tip;
+  const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width/2 - w/2)) + "px";
+  tip.style.top = (r.top - h - 8 < 8 ? r.bottom + 8 : r.top - h - 8) + "px";
+  tip.style.opacity = 1;
+});
+addEventListener("scroll", () => tip.style.opacity = 0, {passive:true});
+
+/* ---------- colonnade (drawn, echoing the engraved columns on minerva's site) ---------- */
+(function(){
+  const c = getComputedStyle(document.documentElement).getPropertyValue("--column").trim() || "#b9b3a3";
+  const W = 64, H = 120, L = (x1,y1,x2,y2,w=.8) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="${w}"/>`;
+  let g = `<rect x="0" y="6" width="${W}" height="3" fill="${c}"/>` + L(0,13,W,13,.6) + L(0,17,W,17,1.4);
+  for (let x = 2; x < W; x += 4) g += L(x,9,x,13,.6);                       // dentils
+  const cx = 32, sw = 16;                                                     // column
+  g += `<path d="M${cx-13} 24 q4 -6 13 -6 q9 0 13 6 z" fill="none" stroke="${c}" stroke-width=".9"/>`;
+  g += `<circle cx="${cx-12}" cy="25" r="2.4" fill="none" stroke="${c}" stroke-width=".8"/><circle cx="${cx+12}" cy="25" r="2.4" fill="none" stroke="${c}" stroke-width=".8"/>`;
+  g += `<rect x="${cx-10}" y="27" width="20" height="3" fill="none" stroke="${c}" stroke-width=".8"/>`;
+  for (let i = 0; i <= 6; i++){ const x = cx - sw/2 + i * sw/6; g += L(x,30,x,H,.7); }
+  g += L(0,H-.5,W,H-.5,1.2);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  document.getElementById("colonnade").style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+})();
+
+function renderAll(){ header(); kpis(); heatmap(); failures(); tasks(); }
+renderAll();
+</script>
